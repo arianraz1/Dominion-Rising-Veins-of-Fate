@@ -11,7 +11,5 @@
     </content>
     <orderEntry type="jdk" jdkName="openjdk-25" jdkType="JavaSDK" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="library" name="junit.jupiter" level="project" />
-    <orderEntry type="library" name="google.code.gson" level="project" />
   </component>
 </module>

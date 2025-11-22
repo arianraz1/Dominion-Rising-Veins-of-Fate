@@ -1,0 +1,48 @@
+{
+  "id": 0,
+  "title": "",
+  "description": "",
+
+  "choices": [
+    {
+      "text": "",
+      "statChange": {
+        "blood": 0,
+        "population": 0,
+        "happiness": 0,
+        "corruption": 0,
+        "dominionLevel": 0
+      }
+    },
+    {
+      "text": "",
+      "statChange": {
+        "blood": 0,
+        "population": 0,
+        "happiness": 0,
+        "corruption": 0,
+        "dominionLevel": 0
+      }
+    }
+  ],
+
+  "requirements": {
+    "minStats": {
+      "blood": 0,
+      "population": 0,
+      "happiness": 0,
+      "corruption": 0,
+      "dominionLevel": 0
+    },
+    "maxStats": {
+      "blood": 0,
+      "population": 0,
+      "happiness": 0,
+      "corruption": 0,
+      "dominionLevel": 0
+    },
+    "requiredEvents": []
+  },
+
+  "preventEvents": []
+}

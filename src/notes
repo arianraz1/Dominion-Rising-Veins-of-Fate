@@ -1,0 +1,17 @@
+GSON:
+
+// Serialization turns an object into a Json, but as a string
+String json = gson.toJson(user);
+
+// Deserialization turns a json into an object from a string (updates class fields)
+// Json keys -> class fields
+// It returns the object of the same class you pass to it
+
+UserSimple user = gson.fromJson(userJson, UserSimple.class);
+// Gson expects corresponding Json arrays to be a collection type (lists or arrays)
+
+// If multiple objects in Gson you can
+1. Create an object of that class within the outer class and Gson will automatically initialize it
+(Converting to Json) : You can initialize multiple objects, (within the outer most object in object), and Json will follow the path of the outermost object
+
+(Converting from Json) For lists, Gson looks at the lists type and matches them to the class of that type.
