@@ -1,24 +1,32 @@
 package game;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
+// Match Json template to class for parsing
 public class Event {
     private int id;
     private String title;
     private String description;
-
     private ArrayList<Choice> choices;
     private Requirements requirements;
-    private ArrayList<String> preventEvents;
+    private HashMap<Integer, String> preventEvents; //
 
     public Event() {
         this.id = 0;
         this.title = "";
         this.description = "";
         this.choices = new ArrayList<>();
-        this.preventEvents = new ArrayList<>();
+        this.preventEvents = new HashMap<>();
         this.requirements = new Requirements();
     }
+
+    public int getId() { return id; }
+    public String getTitle() { return title; }
+    public String getDescription() { return description; }
+    public ArrayList<Choice> getChoices() { return choices; }
+    public Requirements getRequirements() { return requirements; }
+    public HashMap<Integer, String> getPreventEvents() { return preventEvents; }
 
     public static class Choice {
         private String text;
@@ -49,12 +57,4 @@ public class Event {
         public StatHolder getMinStats() { return minStats; }
         public StatHolder getMaxStats() { return maxStats; }
     }
-
-    // Event getters
-    public int getId() { return id; }
-    public String getTitle() { return title; }
-    public String getDescription() { return description; }
-    public ArrayList<Choice> getChoices() { return choices; }
-    public Requirements getRequirements() { return requirements; }
-    public ArrayList<String> getPreventEvents() { return preventEvents; }
 }

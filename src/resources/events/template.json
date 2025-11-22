@@ -44,5 +44,7 @@
     "requiredEvents": []
   },
 
-  "preventEvents": []
+  "preventEvents": {
+    "0": "Example"
+  }
 }
