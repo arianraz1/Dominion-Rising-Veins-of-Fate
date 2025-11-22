@@ -19,7 +19,7 @@ public class GameState {
     private static final int MAX_POPULATION = 1_000_000; // Allow for substantial kingdom expansion
     private static final int MAX_HAPPINESS = 100_000; // Scarcer, reflects the vampiric nature of the kingdom
     private static final int MAX_CORRUPTION = 1_000_000; // Allow for substantial growth in corruption
-    private static final int MAX_DOMINION_LEVEL = 10; // Maximum dominion level — game completion
+    private static final int MAX_DOMINION_LEVEL = 5; // Maximum dominion level — game completion
 
     // Prevent stats from turning negative
     private static final int MIN_STAT = 0;

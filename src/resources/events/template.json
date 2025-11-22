@@ -1,28 +1,30 @@
 {
   "id": 0,
-  "title": "",
-  "description": "",
+  "title": "Example",
+  "description": "Example",
 
   "choices": [
     {
-      "text": "",
+      "text": "Example",
       "statChange": {
         "blood": 0,
         "population": 0,
         "happiness": 0,
         "corruption": 0,
         "dominionLevel": 0
-      }
+      },
+      "outcomeText": "Example"
     },
     {
-      "text": "",
+      "text": "Example",
       "statChange": {
         "blood": 0,
         "population": 0,
         "happiness": 0,
         "corruption": 0,
         "dominionLevel": 0
-      }
+      },
+      "outcomeText": "Example"
     }
   ],
 
@@ -41,10 +43,45 @@
       "corruption": 0,
       "dominionLevel": 0
     },
-    "requiredEvents": []
+    "requiredEvents": {
+      "0": { "title": "Example" }
+    }
   },
 
   "preventEvents": {
-    "0": "Example"
+    "0": { "title": "Example" }
+  },
+
+  "forced": false,
+
+  "forcesEvents": {
+    "0": { "title": "Example" }
+  },
+
+  "eventInfluences": {
+    "0": {
+      "title": "Example",
+      "priority": 0,
+      "statChange": {
+        "blood": 0,
+        "population": 0,
+        "happiness": 0,
+        "corruption": 0,
+        "dominionLevel": 0
+      },
+      "overrideOutcomeText": "Example"
+    },
+    "1": {
+      "title": "Example",
+      "priority": 0,
+      "statChange": {
+        "blood": 0,
+        "population": 0,
+        "happiness": 0,
+        "corruption": 0,
+        "dominionLevel": 0
+      },
+      "overrideOutcomeText": "Example"
+    }
   }
 }
