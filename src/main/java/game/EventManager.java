@@ -30,6 +30,10 @@ public class EventManager {
 
     // Load all events into their proper sets
     private void loadAllEvents(int dominionLevel) {
+        loadedEvents.clear();
+        availableEvents.clear();
+        eventTriggers.clear();
+
         String dirPath = switch (dominionLevel) {
             case 0 -> "/events/0_Early";
             case 1 -> "/events/1_Early_Mid";
@@ -75,6 +79,7 @@ public class EventManager {
         return loadedEvents.values();
     }
 
+    // TODO if an event CANNOT get triggered, find the reason why, if there's a valid reason it CANNOT EVER GET TRIGGERED, remove it
     // Check if an event can currently trigger
     public boolean canTriggerEvent(int id, GameState gs) {
         if (eventBeingForced) return false;
@@ -85,7 +90,7 @@ public class EventManager {
         // Get the number of triggers of the event
         int triggers = eventTriggers.getOrDefault(id, 0);
 
-        // Check if the event does not have unlimited triggers and reached its trigger threshold
+        // Check if the event has reached its trigger threshold
         if (event.getMaxTriggered() != -1 && triggers >= event.getMaxTriggered()) return false;
 
         // Check if all required events for this event have already been triggered
@@ -138,6 +143,15 @@ public class EventManager {
         }
 
         return event;
+    }
+
+    public void updateAvailableEvents(GameState gs) {
+        availableEvents.clear();
+        for (Integer key : loadedEvents.keySet()) {
+            if (canTriggerEvent(key, gs)) {
+                availableEvents.put(key, loadedEvents.get(key));
+            }
+        }
     }
 
     // Check if there are any forced events waiting
