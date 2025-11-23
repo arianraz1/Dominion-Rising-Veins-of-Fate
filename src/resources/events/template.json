@@ -53,8 +53,9 @@
   },
 
   "forced": false,
+  "maxTriggered": -1,
 
-  "forcesEvents": {
+  "forcesEvent": {
     "0": { "title": "Example" }
   },
 
