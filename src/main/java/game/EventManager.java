@@ -6,25 +6,31 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 
 public class EventManager {
-    private HashMap<Integer, Event> loadedEvents; // All events within the dominion level
-    private HashMap<Integer, Event> availableEvents;
-    private HashMap<Integer, Integer> eventTriggers; // Number of triggers, also serves as history
+    private Map<Integer, Event> loadedEvents; // All events within the dominion level
+    private List<Event> availableEvents;
+    private Map<Integer, Integer> eventTriggers; // Number of triggers
+    private List<Event> triggeredHistory; // Triggered event history
+    private Set<Integer> preventedEvents = new HashSet<>();
 
     // If an event is being forced, it is the next event
     private boolean eventBeingForced;
-    Event nextEvent;
+    private Event nextEvent;
+
+    // Randomize events
+    private Random random;
 
     public EventManager(int dominionLevel) {
         loadedEvents = new HashMap<>();
+        availableEvents = new ArrayList<>();
         eventTriggers = new HashMap<>();
+        triggeredHistory = new ArrayList<>();
+        preventedEvents = new HashSet<>();
         eventBeingForced = false;
         nextEvent = null;
+        random = new Random();
         loadAllEvents(dominionLevel);
     }
 
@@ -32,7 +38,11 @@ public class EventManager {
     private void loadAllEvents(int dominionLevel) {
         loadedEvents.clear();
         availableEvents.clear();
-        eventTriggers.clear();
+        // eventTriggers.clear();
+        // triggeredHistory.clear();
+        // preventedEvents.clear();
+        eventBeingForced = false;
+        nextEvent = null;
 
         String dirPath = switch (dominionLevel) {
             case 0 -> "/events/0_Early";
@@ -79,7 +89,6 @@ public class EventManager {
         return loadedEvents.values();
     }
 
-    // TODO if an event CANNOT get triggered, find the reason why, if there's a valid reason it CANNOT EVER GET TRIGGERED, remove it
     // Check if an event can currently trigger
     public boolean canTriggerEvent(int id, GameState gs) {
         if (eventBeingForced) return false;
@@ -94,8 +103,8 @@ public class EventManager {
         if (event.getMaxTriggered() != -1 && triggers >= event.getMaxTriggered()) return false;
 
         // Check if all required events for this event have already been triggered
-        for (Integer reqId : event.getRequirements().getRequiredEvents().keySet()) {
-            if (!eventTriggers.containsKey(reqId)) return false;
+        for (Event.EventRef requiredEvent : event.getRequirements().getRequiredEvents()) {
+            if (eventTriggers.getOrDefault(requiredEvent.getId(), 0) == 0) return false;
         }
 
         // Check if all the stats are between min and max
@@ -119,9 +128,7 @@ public class EventManager {
         if ((minCorruption != -1 && corruption < minCorruption) || (maxCorruption != -1 && corruption > maxCorruption)) return false;
 
         // Check if any preventing triggered events exists
-        for (Integer preventId : event.getPreventEvents().keySet()) {
-            if (eventTriggers.containsKey(preventId)) return false;
-        }
+        if (preventedEvents.contains(id)) return false;
 
         return true;
     }
@@ -130,43 +137,114 @@ public class EventManager {
     public Event triggerEvent(int id, GameState gs) {
         if (!canTriggerEvent(id, gs)) return null;
 
-        Event event = availableEvents.get(id);
+        Event event = loadedEvents.get(id);
         if (event == null) return null;
 
         // Place event into history, and increase it's trigger count
+        triggeredHistory.add(event);
         eventTriggers.put(id, eventTriggers.getOrDefault(id, 0) + 1);
-
-        // If the event forces an event, make sure to include it
-        if (event.getForcesEvent() != null) {
-            eventBeingForced = true;
-            nextEvent = event;
-        }
 
         return event;
     }
 
     public void updateAvailableEvents(GameState gs) {
         availableEvents.clear();
-        for (Integer key : loadedEvents.keySet()) {
-            if (canTriggerEvent(key, gs)) {
-                availableEvents.put(key, loadedEvents.get(key));
+        for (Event event : loadedEvents.values()) {
+            if (canTriggerEvent(event.getId(), gs)) {
+                availableEvents.add(event);
             }
         }
     }
 
-    // Check if there are any forced events waiting
+    // Get the forced event
     public Event getForcedEvent() {
         if (nextEvent == null) return null;
+        eventBeingForced = false;
         return nextEvent;
     }
 
     // Get a random event (forced takes priority)
-    // TODO
     public Event getRandomEvent() {
-        if (eventBeingForced) return nextEvent;
+        if (eventBeingForced) return getForcedEvent();
 
-        return null;
+        int size = availableEvents.size();
+        if (size == 0) return null;
 
+        return availableEvents.get(random.nextInt(size));
+    }
+
+    // Execute a choice from an event
+    public void choose(Event event, Event.Choice choice, GameState gs) {
+        if (event == null || choice == null) return;
+
+        // Apply stat changes
+        gs.applyStats(choice.getStatChange());
+
+        // Handle forced event, if any
+        if (choice.getForcesEvent() != null) {
+            nextEvent = loadedEvents.get(choice.getForcesEvent().getId());
+            if (nextEvent != null) eventBeingForced = true;
+        }
+
+        // Handle prevented events, if any
+        for (Event.EventRef prevented : choice.getPreventEvents()) {
+            preventedEvents.add(prevented.getId());
+        }
+
+        // Apply event influences, if any (first triggered only, already ordered by priority)
+        for (Event.EventInfluence influence : choice.getEventInfluences()) {
+            if (eventTriggers.getOrDefault(influence.getId(), 0) > 0) {
+                gs.applyStats(influence.getStatChange());
+                break; // only the first applicable influence triggers
+            }
+        }
+
+        // Update available events for next round
+        updateAvailableEvents(gs);
+    }
+
+    public static class EventView {
+        private final String title;
+        private final String description;
+        private final List<String> choiceTexts;
+
+        public EventView(String title, String description, List<String> choiceTexts) {
+            this.title = title;
+            this.description = description;
+            this.choiceTexts = choiceTexts;
+        }
+
+        public String getTitle() { return title; }
+        public String getDescription() { return description; }
+        public List<String> getChoiceTexts() { return choiceTexts; }
+    }
+
+    // Return EventView object to display event details
+    public EventView getEventView(Event event)  {
+        if (event == null) return null;
+
+        List<String> choiceTexts = new ArrayList<>();
+        for (Event.Choice choice : event.getChoices()) {
+            choiceTexts.add(choice.getText());
+        }
+        return new EventView(event.getTitle(), event.getDescription(), choiceTexts);
+    }
+
+    // After a choice was made, get the resulting text
+    public String getChoiceOutcomeText(Event.Choice choice) {
+        if (choice == null) return null;
+
+        // Check event influences first (assume JSON is ordered by descending priority)
+        for (Event.EventInfluence influence : choice.getEventInfluences()) {
+            int influenceId = influence.getId();
+            if (eventTriggers.getOrDefault(influenceId, 0) > 0
+                    && !influence.getOverrideOutcomeText().isEmpty()) {
+                return influence.getOverrideOutcomeText();
+            }
+        }
+
+        // Fallback to the choice's own outcome text, or the choice text if empty
+        return choice.getOutcomeText().isEmpty() ? choice.getText() : choice.getOutcomeText();
     }
 }
 

@@ -91,6 +91,14 @@ public class GameState {
         setDominionLevel(this.dominionLevel + amount);
     }
 
+    public void applyStats(Event.StatHolder stats) {
+        if (stats.getBlood() != -1) addBlood(stats.getBlood());
+        if (stats.getPopulation() != -1) addPopulation(stats.getPopulation());
+        if (stats.getHappiness() != -1) addHappiness(stats.getHappiness());
+        if (stats.getCorruption() != -1) addCorruption(stats.getCorruption());
+        if (stats.getDominionLevel() != -1) addDominionLevel(stats.getDominionLevel());
+    }
+
     @Override
     public String toString() {
         return String.format(
