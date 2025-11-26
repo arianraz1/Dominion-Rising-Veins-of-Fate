@@ -2,10 +2,10 @@ package game;
 
 import com.google.gson.Gson;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -25,18 +25,24 @@ public class SaveManager {
         );
 
         File saveFile = new File(SAVE_FILE);
+        File backup = new File(SAVE_FILE + ".bak");
 
-        // Backup existing save (single backup)
+        // Make sure backup is clean
         if (saveFile.exists()) {
-            File backup = new File(SAVE_FILE + ".bak");
-            if (!saveFile.renameTo(backup)) {
-                System.err.println("[SaveManager] Warning: failed to create backup save.");
+            if (backup.exists() && !backup.delete()) {
+                System.err.println("[SaveManager] Warning: failed to delete old backup save.");
+            }
+            try {
+                // Copy saveFile to backup
+                Files.copy(saveFile.toPath(), backup.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            } catch (IOException e) {
+                System.err.println("[SaveManager] Warning: failed to create backup save: " + e.getMessage());
             }
         }
 
-        // Write the new save
-        try (FileWriter fw = new FileWriter(saveFile)) {
-            gson.toJson(fgs, fw);
+        // Write new save
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(saveFile, StandardCharsets.UTF_8))) {
+            gson.toJson(fgs, writer);
         }
     }
 
@@ -53,8 +59,8 @@ public class SaveManager {
 
         if (!file.exists()) return defaultSave;
 
-        try (FileReader fr = new FileReader(file)) {
-            FullGameSave loaded = gson.fromJson(fr, FullGameSave.class);
+        try (BufferedReader reader = new BufferedReader(new FileReader(file, StandardCharsets.UTF_8))) {
+            FullGameSave loaded = gson.fromJson(reader, FullGameSave.class);
             if (loaded == null) return defaultSave;
             return loaded;
         } catch (IOException | com.google.gson.JsonSyntaxException e) {
@@ -63,11 +69,26 @@ public class SaveManager {
         }
     }
 
+    // Restore the information in event manager from new load
     public static void restoreEventManager(EventManager em, FullGameSave fgs) {
         em.setEventTriggers(fgs.getEventTriggers());
         em.setTriggeredHistory(fgs.getTriggeredHistory());
         em.setPreventedEvents(fgs.getPreventEvents());
         em.setForcedQueue(fgs.getForcedQueue());
+    }
+
+
+    public static void resetSave() {
+        File saveFile = new File(SAVE_FILE);
+        File backup = new File(SAVE_FILE + ".bak");
+
+        if (saveFile.exists() && !saveFile.delete()) {
+            System.err.println("[SaveManager] Warning: failed to delete save file.");
+        }
+        if (backup.exists() && !backup.delete()) {
+            System.err.println("[SaveManager] Warning: failed to delete backup save.");
+        }
+        System.out.println("[SaveManager] Save files reset.");
     }
 }
 

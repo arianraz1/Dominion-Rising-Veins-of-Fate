@@ -1,0 +1,14 @@
+{
+  "id": 1,
+  "title": "...",
+  "description": ["I know how consumed in rage you are...",
+                  "Boohoo...",
+                  "",
+                  "You wonder who I am?",
+                  "Well, let's just say... I'm the voice in your head from now on."],
+
+  "forced": true,
+  "maxTriggered": 1
+}
+
+

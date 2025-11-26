@@ -42,6 +42,14 @@ public class GameState {
         setDominionLevel(dominionLevel);
     }
 
+    public GameState(GameState other) {
+        this.blood = other.getBlood();
+        this.population = other.getPopulation();
+        this.happiness = other.getHappiness();
+        this.corruption = other.getCorruption();
+        this.dominionLevel = other.getDominionLevel();
+    }
+
     public int getBlood() { return blood; }
     public int getPopulation() { return population; }
     public int getHappiness() { return happiness; }

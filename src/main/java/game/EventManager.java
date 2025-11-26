@@ -2,10 +2,8 @@ package game;
 
 import com.google.gson.Gson;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 /**
@@ -37,7 +35,6 @@ public class EventManager {
         loadStaticEvents(dominionLevel);
     }
 
-    // Load all static events (note: this ONLY loads a players respective dominionLevel events)
     private void loadStaticEvents(int dominionLevel) {
         Map<Integer, Event> newEvents = new HashMap<>();
 
@@ -53,35 +50,69 @@ public class EventManager {
 
         if (dirPath == null) return;
 
-        int i = 0;
-        while (true) {
-            String path = dirPath + "/" + i + ".json";
-            try (InputStream in = getClass().getResourceAsStream(path)) {
-                if (in == null) break;
+        // Load manifest
+        try (InputStream manifestStream = getClass().getResourceAsStream(dirPath + "/manifest.json")) {
+            if (manifestStream == null) {
+                System.err.println("[EventManager] Manifest not found: " + dirPath + "/manifest.json");
+                return;
+            }
 
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(in))) {
-                    Event event = gson.fromJson(reader, Event.class);
-                    if (event == null) {
-                        System.err.println("[EventManager] Warning: parsed null event " + path);
-                    } else {
-                        if (newEvents.containsKey(event.getId())) {
-                            System.err.println("[EventManager] Duplicate event " + event.getId());
-                        }
-                        newEvents.put(event.getId(), event);
-                    }
+            try (BufferedReader manifestReader = new BufferedReader(new InputStreamReader(manifestStream, StandardCharsets.UTF_8))) {
+                Manifest manifest = gson.fromJson(manifestReader, Manifest.class);
+
+                if (manifest == null || manifest.events == null) {
+                    System.err.println("[EventManager] Manifest is empty or invalid: " + dirPath + "/manifest.json");
+                    return;
                 }
 
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+                // Load each event
+                for (String fileName : manifest.events) {
+                    String path = dirPath + "/Event_List/" + fileName;
+                    try (InputStream fileStream = getClass().getResourceAsStream(path)) {
+                        if (fileStream == null) {
+                            System.err.println("[EventManager] Event file not found: " + path);
+                            continue;
+                        }
+
+                        try (BufferedReader eventReader = new BufferedReader(new InputStreamReader(fileStream, StandardCharsets.UTF_8))) {
+                            Event event = gson.fromJson(eventReader, Event.class);
+                            if (event == null) {
+                                System.err.println("[EventManager] Warning: parsed null event " + path);
+                                continue;
+                            }
+
+                            // Always add event to loadedEvents
+                            if (newEvents.containsKey(event.getId())) {
+                                System.err.println("[EventManager] Duplicate event " + event.getId() + " detected.");
+                            }
+                            newEvents.put(event.getId(), event);
+
+                            // Queue INITIALLY forced events only once
+                            if (event.isForced() && eventTriggers.getOrDefault(event.getId(), 0) == 0) {
+                                forcedQueue.addLast(event.getId());
+                            }
+                        }
+                    }
+                }
             }
-            i++;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
 
         // Replace static events
         this.loadedEvents = newEvents;
 
-        // Validate references inside events (requiredEvents, preventEvents, forcesEvent, eventInfluences)
+        // Validate references inside events
         validateEventReferences();
+    }
+
+    public void initializeForcedEventsAfterRestore() {
+        forcedQueue.clear();
+        for (Event event : loadedEvents.values()) {
+            if (event.isForced() && eventTriggers.getOrDefault(event.getId(), 0) == 0) {
+                forcedQueue.addLast(event.getId());
+            }
+        }
     }
 
     // Validate the internal content/references — warn any reference to a missing event.
@@ -172,18 +203,15 @@ public class EventManager {
 
     /**
      * Get a random event. forcedQueue takes priority, is polled and returned if applicable.
-     * Otherwise, selects uniformly from currently available events (after recalculation).
+     * Otherwise, selects uniformly from currently available events.
      */
     public Event getRandomEvent(GameState gs) {
         while (!forcedQueue.isEmpty()) {
-            int forcedId = forcedQueue.pollFirst();
-            Event forced = loadedEvents.get(forcedId);
-            // Re-run if the forced event is null
-            if (forced != null) return forced;
+            Event forced = loadedEvents.get(forcedQueue.pollFirst());
+            if (forced != null && canTriggerEvent(forced.getId(), gs)) return forced;
         }
 
         // Fall to available events if no forced event
-        updateAvailableEvents(gs);
         if (availableEvents.isEmpty()) return null;
         return availableEvents.get(random.nextInt(availableEvents.size()));
     }
@@ -210,12 +238,25 @@ public class EventManager {
      */
     public Event triggerEvent(int id, GameState gs) {
         if (!canTriggerEvent(id, gs)) return null;
-        Event event = loadedEvents.get(id);
-        if (event == null) return null;
         eventTriggers.put(id, eventTriggers.getOrDefault(id, 0) + 1);
-        triggeredHistory.add(event.getId());
-        return event;
+        triggeredHistory.add(id);
+        return loadedEvents.get(id);
     }
+
+    // Handle if the player levels up at all during gameplay
+    static EventManager handleLevelUp(GameState gs, EventManager em) {
+        // Create new EventManager for the new level
+        EventManager newEM = new EventManager(gs.getDominionLevel(), gs);
+
+        // Copy over old dynamic state
+        newEM.setEventTriggers(em.getEventTriggers());
+        newEM.setTriggeredHistory(em.getTriggeredHistory());
+        newEM.setPreventedEvents(em.getPreventedEvents());
+        newEM.setForcedQueue(em.getForcedQueue());
+
+        return newEM;
+    }
+
 
     /**
      * Apply the effects of a player's choice based on the triggered event.
@@ -228,10 +269,17 @@ public class EventManager {
     public void choose(Event event, Event.Choice choice, GameState gs) {
         if (event == null || choice == null) return;
 
+        // Record the event trigger BEFORE applying choice effects so requirements/influences/maxTriggered are correct.
+        Event triggered = triggerEvent(event.getId(), gs);
+        if (triggered == null) {
+            System.err.println("[EventManager] Warning: attempt to choose on untriggerable event id " + event.getId());
+            return;
+        }
+
         // Apply stat changes
         gs.applyStats(choice.getStatChange());
 
-        // Queue's if the choice has a forced event
+        // Queue forced events from this choice
         Event.EventRef forcesEvent = choice.getForcesEvent();
         if (forcesEvent != null && forcesEvent.getId() != -1) {
             if (!loadedEvents.containsKey(forcesEvent.getId())) {
@@ -241,7 +289,7 @@ public class EventManager {
             }
         }
 
-        // Handle prevented events, if any
+        // Handle prevented events
         for (Event.EventRef preventEvent : choice.getPreventEvents()) {
             if (preventEvent != null && preventEvent.getId() != -1) {
                 if (!loadedEvents.containsKey(preventEvent.getId())) {
@@ -252,18 +300,30 @@ public class EventManager {
             }
         }
 
-        // Apply influences: choose highest-priority influenced event which has been triggered before
-        List<Event.EventInfluence> eventInfluences = new ArrayList<>(choice.getEventInfluences());
-        eventInfluences.sort((a, b) -> Integer.compare(b.getPriority(), a.getPriority()));
-        for (Event.EventInfluence eventInfluence : eventInfluences) {
-            if (eventTriggers.getOrDefault(eventInfluence.getId(), 0) > 0) {
-                gs.applyStats(eventInfluence.getStatChange());
-                break;
-            }
+        // Apply highest-priority triggered influence (if any)
+        Event.EventInfluence influence = getHighestPriorityTriggeredInfluence(choice.getEventInfluences());
+        if (influence != null) {
+            gs.applyStats(influence.getStatChange());
         }
 
-        // Update available events for next round
+        // Recompute available events
         updateAvailableEvents(gs);
+    }
+
+
+    private Event.EventInfluence getHighestPriorityTriggeredInfluence(List<Event.EventInfluence> influences) {
+        if (influences == null || influences.isEmpty()) return null;
+
+        // Make a copy and sort descending by priority
+        List<Event.EventInfluence> sorted = new ArrayList<>(influences);
+        sorted.sort((a, b) -> Integer.compare(b.getPriority(), a.getPriority()));
+
+        for (Event.EventInfluence influence : sorted) {
+            if (eventTriggers.getOrDefault(influence.getId(), 0) > 0) {
+                return influence;
+            }
+        }
+        return null;
     }
 
     // ----------------- HELPERS -----------------
@@ -297,69 +357,78 @@ public class EventManager {
     }
 
     void setEventTriggers(Map<Integer, Integer> triggers) {
-        this.eventTriggers.clear();
-        this.eventTriggers.putAll(triggers);
+        this.eventTriggers = new HashMap<>(triggers);
     }
 
     void setTriggeredHistory(List<Integer> history) {
-        this.triggeredHistory.clear();
-        this.triggeredHistory.addAll(history);
+        this.triggeredHistory = new ArrayList<>(history);
     }
 
     void setPreventedEvents(Set<Integer> prevented) {
-        this.preventedEvents.clear();
-        this.preventedEvents.addAll(prevented);
+        this.preventedEvents = new HashSet<>(prevented);
     }
 
     void setForcedQueue(Deque<Integer> forced) {
-        this.forcedQueue.clear();
-        this.forcedQueue.addAll(forced);
+        this.forcedQueue = new ArrayDeque<>(forced);
+    }
+
+    public List<String> getChoiceOutcomeLines(Event.Choice choice) {
+        if (choice == null) return List.of();
+
+        // Check highest-priority triggered influence first
+        Event.EventInfluence highest = getHighestPriorityTriggeredInfluence(choice.getEventInfluences());
+        if (highest != null && highest.getOverrideOutcomeText() != null && !highest.getOverrideOutcomeText().isEmpty()) {
+            return highest.getOverrideOutcomeText();
+        }
+
+        // Use the choice's outcome text if present
+        if (choice.getOutcomeText() != null && !choice.getOutcomeText().isEmpty()) {
+            return choice.getOutcomeText();
+        }
+
+        // Fallback: return the choice text
+        if (choice.getText() != null && !choice.getText().isEmpty()) {
+            return choice.getText();
+        }
+
+        // If everything else is empty, return an empty list
+        return List.of();
     }
 
     // ---------- EVENT VIEW INFORMATION ----------
 
     public static class EventView {
         private final String title;
-        private final String description;
-        private final List<String> choiceTexts;
+        private final List<String> descriptionLines;
+        private final List<List<String>> choiceLines;
 
-        public EventView(String title, String description, List<String> choiceTexts) {
+        public EventView(String title, List<String> descriptionLines, List<List<String>> choiceLines) {
             this.title = title;
-            this.description = description;
-            this.choiceTexts = choiceTexts;
+            this.descriptionLines = descriptionLines;
+            this.choiceLines = choiceLines;
         }
 
         public String getTitle() { return title; }
-        public String getDescription() { return description; }
-        public List<String> getChoiceTexts() { return choiceTexts; }
+        public List<String> getDescriptionLines() { return descriptionLines; }
+        public List<List<String>> getChoiceLines() { return choiceLines; }
     }
 
     // Return EventView object to display event details
-    public EventView getEventView(Event event)  {
+    public EventView getEventView(Event event) {
         if (event == null) return null;
 
-        List<String> choiceTexts = new ArrayList<>();
+        // Use the event's description directly (already a List<String>)
+        List<String> descriptionLines = event.getDescription() != null
+                ? event.getDescription()
+                : List.of();
+
+        // Prepare choice lines
+        List<List<String>> choiceLines = new ArrayList<>();
         for (Event.Choice choice : event.getChoices()) {
-            choiceTexts.add(choice.getText());
-        }
-        return new EventView(event.getTitle(), event.getDescription(), choiceTexts);
-    }
-
-    // After a choice was made, get the resulting text
-    public String getChoiceOutcomeText(Event.Choice choice) {
-        if (choice == null) return null;
-
-        // Check event influences first (assume JSON is ordered by descending priority)
-        for (Event.EventInfluence influence : choice.getEventInfluences()) {
-            int influenceId = influence.getId();
-            if (eventTriggers.getOrDefault(influenceId, 0) > 0
-                    && !influence.getOverrideOutcomeText().isEmpty()) {
-                return influence.getOverrideOutcomeText();
-            }
+            choiceLines.add(choice.getText());
         }
 
-        // Fallback to the choice's own outcome text, or the choice text if empty
-        return choice.getOutcomeText().isEmpty() ? choice.getText() : choice.getOutcomeText();
+        return new EventView(event.getTitle(), descriptionLines, choiceLines);
     }
 }
 

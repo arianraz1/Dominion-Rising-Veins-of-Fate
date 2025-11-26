@@ -15,3 +15,7 @@ UserSimple user = gson.fromJson(userJson, UserSimple.class);
 (Converting to Json) : You can initialize multiple objects, (within the outer most object in object), and Json will follow the path of the outermost object
 
 (Converting from Json) For lists, Gson looks at the lists type and matches them to the class of that type.
+
+
+---- STORY ----
+
