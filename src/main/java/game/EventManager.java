@@ -7,8 +7,37 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 /**
- * This class manages all data relating directly to Events, whether that's parsing, saving, loading, or tracking them.
+ * EventManager Overview:
+ *
+ * Manages all data related to game events, including:
+ * - Parsing events from JSON files except from loads/saves (see SaveManager for saving/loading parsing)
+ * - Holds data required for saving event-related state
+ * - Tracking and managing the game state.
+ *
+ * This class does not handle player interactions directly; it only maintains the
+ * internal state and logic for event triggering and queuing.
+ *
+ * Event Flow:
+ * 1. Events are loaded for a dominion level via loadStaticEvents().
+ * 2. updateAvailableEvents(...) evaluates all loaded events:
+ *    - Adds all triggerable events to the availableEvents list.
+ *    - Queues triggerable forced events according to queueForcedEventIfApplicable(...) rules.
+ * 3. getRandomWeightedEvent(gs) selects the next event:
+ *    - Forced Events take priority and are returned and dequeued first
+ *    - Non-forced events are weighted by the amount of their requirement events (guaranteed to be fulfilled)
+ * 4. Each event/choice impacts stats and instance variables.
+ * 5. Outcomes are based on past events (see Influence System section below).
+ *
+ * Influence System:
+ *    - Only the highest-priority triggered influence is applied, determined first-by-descending-priority.
+ *    - The influence stat effects compound with the choice's effects
+ *    - However, only the influence outcome is displayed
+ *
+ * EventView object reflects the relevant information to display to the user.
+ *
+ * See src/resources/events/template.json for interplay and interconnectivity of events and their data.
  */
+
 public class EventManager {
     private Map<Integer, Event> loadedEvents; // All events within the dominion level
     private List<Event> availableEvents; // All available events within current constraints
@@ -18,10 +47,12 @@ public class EventManager {
     private Set<Integer> preventedEvents; // Set of completely prevented events
     private Deque<Integer> forcedQueue; // Queue of forced events
 
+    Integer currentEventID;
+
     private final Gson gson = new Gson();
     private Random random;
 
-    public EventManager(int dominionLevel, GameState gs) {
+    public EventManager(int dominionLevel) {
         this.loadedEvents = new HashMap<>();
         this.availableEvents = new ArrayList<>();
 
@@ -30,11 +61,19 @@ public class EventManager {
         this.preventedEvents = new HashSet<>();
         this.forcedQueue = new ArrayDeque<>();
 
+        this.currentEventID = null;
         this.random = new Random();
 
         loadStaticEvents(dominionLevel);
     }
 
+    /**
+     * Loads all static events within the specified dominion level.
+     * These events are stored in loadedEvents but do not directly affect availableEvents.
+     * Static events need to be updated after the player's dominion level changes.
+     *
+     * @param dominionLevel The dominion level for which to load static events.
+     */
     private void loadStaticEvents(int dominionLevel) {
         Map<Integer, Event> newEvents = new HashMap<>();
 
@@ -86,11 +125,6 @@ public class EventManager {
                                 System.err.println("[EventManager] Duplicate event " + event.getId() + " detected.");
                             }
                             newEvents.put(event.getId(), event);
-
-                            // Queue INITIALLY forced events only once
-                            if (event.isForced() && eventTriggers.getOrDefault(event.getId(), 0) == 0) {
-                                forcedQueue.addLast(event.getId());
-                            }
                         }
                     }
                 }
@@ -106,15 +140,6 @@ public class EventManager {
         validateEventReferences();
     }
 
-    public void initializeForcedEventsAfterRestore() {
-        forcedQueue.clear();
-        for (Event event : loadedEvents.values()) {
-            if (event.isForced() && eventTriggers.getOrDefault(event.getId(), 0) == 0) {
-                forcedQueue.addLast(event.getId());
-            }
-        }
-    }
-
     // Validate the internal content/references — warn any reference to a missing event.
     private void validateEventReferences() {
         for (Event event : loadedEvents.values()) {
@@ -127,14 +152,14 @@ public class EventManager {
                 }
                 // preventEvents
                 for (Event.EventRef preventEvent : choice.getPreventEvents()) {
-                    if (preventEvent != null && preventEvent.getId() != -1 && !loadedEvents.containsKey(preventEvent.getId())) {
+                    if (preventEvent.getId() != -1 && !loadedEvents.containsKey(preventEvent.getId())) {
                         System.err.println("[EventManager] Warning: choice in event " + event.getId()
                                 + " prevents missing event id " + preventEvent.getId());
                     }
                 }
                 // influences
                 for (Event.EventInfluence eventInfluence : choice.getEventInfluences()) {
-                    if (eventInfluence != null && eventInfluence.getId() != -1 && !loadedEvents.containsKey(eventInfluence.getId())) {
+                    if (eventInfluence.getId() != -1 && !loadedEvents.containsKey(eventInfluence.getId())) {
                         System.err.println("[EventManager] Warning: influence in event " + event.getId()
                                 + " references missing event id " + eventInfluence.getId());
                     }
@@ -145,7 +170,11 @@ public class EventManager {
 
     /**
      * Returns true if the event is triggerable, meeting constraints (trigger counts, requirements, stats, prevented).
-     * NOTE: This does not check forced-event selection priority, that is handled by getRandomEvent()
+     * NOTE: This does not update any instance variables.
+     *
+     * @param id The ID of the event to check.
+     * @param gs The current GameState used to evaluate stat and requirement constraints.
+     * @return true if the event can currently be triggered, false otherwise.
      */
     public boolean canTriggerEvent(int id, GameState gs) {
         Event event = loadedEvents.get(id);
@@ -177,10 +206,14 @@ public class EventManager {
         int minCorruption = event.getRequirements().getMinStats().getCorruption();
         int maxCorruption = event.getRequirements().getMaxStats().getCorruption();
 
-        if ((minBlood != -1 && blood < minBlood) || (maxBlood != -1 && blood > maxBlood)) return false;
-        if ((minPopulation != -1 && population < minPopulation) || (maxPopulation != -1 && population > maxPopulation)) return false;
-        if ((minHappiness != -1 && happiness < minHappiness) || (maxHappiness != -1 && happiness > maxHappiness)) return false;
-        if ((minCorruption != -1 && corruption < minCorruption) || (maxCorruption != -1 && corruption > maxCorruption)) return false;
+        if ((minBlood != -1 && blood < minBlood) || (maxBlood != -1 && blood > maxBlood))
+            return false;
+        if ((minPopulation != -1 && population < minPopulation) || (maxPopulation != -1 && population > maxPopulation))
+            return false;
+        if ((minHappiness != -1 && happiness < minHappiness) || (maxHappiness != -1 && happiness > maxHappiness))
+            return false;
+        if ((minCorruption != -1 && corruption < minCorruption) || (maxCorruption != -1 && corruption > maxCorruption))
+            return false;
 
         // Check if any preventing triggered events exists
         if (preventedEvents.contains(id)) return false;
@@ -189,31 +222,111 @@ public class EventManager {
     }
 
     /**
-     * Rewrites availableEvents list using the provided GameState.
-     * Does not alter dynamic state other than updating availableEvents.
+     * Rewrites the availableEvents list using the provided GameState, see canTriggerEvent(...) for more details.
+     * Queues forced events according to their trigger rules.
+     *
+     * Logic for forced events:
+     * - Only queue if the event is triggerable.
+     * - Consider maxTriggered limits to determine how many times it can appear in the forced queue.
+     * - Avoid adding duplicates in the forcedQueue.
      */
     public void updateAvailableEvents(GameState gs) {
         availableEvents.clear();
+
         for (Event event : loadedEvents.values()) {
             if (canTriggerEvent(event.getId(), gs)) {
+                // Queue forced events if applicable
+                if (event.isForced()) {
+                    queueForcedEventIfApplicable(event.getId());
+                }
+
+                // Always include in available events
                 availableEvents.add(event);
             }
         }
     }
 
     /**
-     * Get a random event. forcedQueue takes priority, is polled and returned if applicable.
-     * Otherwise, selects uniformly from currently available events.
+     * Adds the forced event to the queue if it does not exceed the
+     * maximum allowed triggers - current triggers - number in queue.
+     *
+     * @param eventId The ID of the event to potentially queue
      */
-    public Event getRandomEvent(GameState gs) {
-        while (!forcedQueue.isEmpty()) {
-            Event forced = loadedEvents.get(forcedQueue.pollFirst());
-            if (forced != null && canTriggerEvent(forced.getId(), gs)) return forced;
+    private void queueForcedEventIfApplicable(int eventId) {
+        if (!loadedEvents.containsKey(eventId)) {
+            System.err.println("[EventManager] Warning: unknown forced event id " + eventId);
+            return;
         }
 
-        // Fall to available events if no forced event
+        Event event = loadedEvents.get(eventId);
+        int triggers = eventTriggers.getOrDefault(eventId, 0);
+        int maxTriggers = event.getMaxTriggered(); // -1 = unlimited
+
+        // Count how many instances are already in the queue
+        int inQueue = 0;
+        for (Integer id : forcedQueue) {
+            if (id == eventId) inQueue++;
+        }
+
+        // Only add if total (triggered + in queue) is less than maxTriggers
+        if (maxTriggers == -1 || triggers + inQueue < maxTriggers) {
+            forcedQueue.addLast(eventId);
+        }
+    }
+
+    /**
+     * Get a random event. forcedQueue takes priority, is polled and returned if applicable.
+     * Otherwise, selects from available events, events with their required events fulfilled are weighted higher.
+     * Chosen event is added to history and available events are always updated.
+     *
+     * @param gs The current GameState, used to check event constraints and update available events
+     * @return The next Event to be presented to the player, or null if no events are available
+     *
+     * Notes:
+     * - Forced events are always returned first, even if other events are available.
+     * - Events are exponentially weighted based on how many required events they have already triggered,
+     *   and for an event to be available it needs all of their required events to be triggered.
+     * - Triggered events are recorded in event history, and the available events list is recalculated
+     *   to reflect updated game state.
+     */
+    public Event getRandomWeightedEvent(GameState gs) {
+        // Handle forced events first
+        while (!forcedQueue.isEmpty()) {
+            Event forced = loadedEvents.get(forcedQueue.pollFirst());
+            if (forced != null) {
+                currentEventID = forced.getId();
+                triggerEventToHistory(currentEventID);
+                updateAvailableEvents(gs);
+                return forced;
+            }
+        }
+
         if (availableEvents.isEmpty()) return null;
-        return availableEvents.get(random.nextInt(availableEvents.size()));
+
+        // Prevent event weight and total weight
+        int totalWeight = 0;
+        List<Integer> weights = new ArrayList<>();
+
+        for (Event e : availableEvents) {
+            int weight = (int) Math.pow(2, e.getRequirements().getRequiredEvents().size());
+            weights.add(weight);
+            totalWeight += weight;
+        }
+
+        // Choose random event based on weights
+        int r = random.nextInt(totalWeight);
+        for (int i = 0; i < availableEvents.size(); i++) {
+            r -= weights.get(i);
+            if (r < 0) {
+                Event chosen = availableEvents.get(i);
+                currentEventID = chosen.getId();
+                triggerEventToHistory(currentEventID);
+                updateAvailableEvents(gs);
+                return chosen;
+            }
+        }
+
+        return null; // This should never happen
     }
 
     // Peek forced event without removing (returns null if none)
@@ -223,8 +336,8 @@ public class EventManager {
     }
 
     /**
-     * Manually pushes a forced event id onto the queue if valid (used by choose()).
-     * Returns true if queued.
+     * Manually pushes a forced event id onto the queue if valid.
+     * This is not meant for debugging, not actual gameplay.
      */
     public boolean queueForcedEvent(int eventId) {
         if (!loadedEvents.containsKey(eventId)) return false;
@@ -233,70 +346,57 @@ public class EventManager {
     }
 
     /**
-     * Trigger an event by id. This records trigger count and history, and returns the Event object or null if it cannot trigger.
-     * Note: This does not execute the consequences of choices — that's handled by choose(event, choice, gs).
+     * Trigger an event to history, adding to its trigger count, and update available events
+     * @param id The id of the event to add to history
      */
-    public Event triggerEvent(int id, GameState gs) {
-        if (!canTriggerEvent(id, gs)) return null;
+    public void triggerEventToHistory(int id) {
         eventTriggers.put(id, eventTriggers.getOrDefault(id, 0) + 1);
         triggeredHistory.add(id);
-        return loadedEvents.get(id);
     }
 
     // Handle if the player levels up at all during gameplay
-    static EventManager handleLevelUp(GameState gs, EventManager em) {
+    public static EventManager handleLevelUp(GameState gs, EventManager em) {
         // Create new EventManager for the new level
-        EventManager newEM = new EventManager(gs.getDominionLevel(), gs);
+        EventManager newEM = new EventManager(gs.getDominionLevel());
 
         // Copy over old dynamic state
         newEM.setEventTriggers(em.getEventTriggers());
         newEM.setTriggeredHistory(em.getTriggeredHistory());
         newEM.setPreventedEvents(em.getPreventedEvents());
         newEM.setForcedQueue(em.getForcedQueue());
+        newEM.setCurrentEventID(em.getCurrentEventID());
 
         return newEM;
     }
 
-
     /**
      * Apply the effects of a player's choice based on the triggered event.
      * - Applies the choice's stat changes
-     * - Queues forced events (does NOT overwrite existing forced queue)
+     * - Queues forced events per forced event queuing rules (see queueForcedEventIfApplicable(...))
      * - Adds prevented events to preventedEvents set
      * - Applies the highest-priority applicable influence (first-by-descending-priority)
-     * - Recalculates availableEvents
      */
     public void choose(Event event, Event.Choice choice, GameState gs) {
         if (event == null || choice == null) return;
 
-        // Record the event trigger BEFORE applying choice effects so requirements/influences/maxTriggered are correct.
-        Event triggered = triggerEvent(event.getId(), gs);
-        if (triggered == null) {
-            System.err.println("[EventManager] Warning: attempt to choose on untriggerable event id " + event.getId());
-            return;
-        }
-
         // Apply stat changes
         gs.applyStats(choice.getStatChange());
 
-        // Queue forced events from this choice
+        // Queue forced event from this choice
         Event.EventRef forcesEvent = choice.getForcesEvent();
         if (forcesEvent != null && forcesEvent.getId() != -1) {
-            if (!loadedEvents.containsKey(forcesEvent.getId())) {
-                System.err.println("[EventManager] Warning: choice forced unknown event id " + forcesEvent.getId());
-            } else {
-                forcedQueue.addLast(forcesEvent.getId());
-            }
+            queueForcedEventIfApplicable(forcesEvent.getId());
         }
 
         // Handle prevented events
-        for (Event.EventRef preventEvent : choice.getPreventEvents()) {
-            if (preventEvent != null && preventEvent.getId() != -1) {
-                if (!loadedEvents.containsKey(preventEvent.getId())) {
-                    System.err.println("[EventManager] Warning: choice prevents unknown event id " + preventEvent.getId());
-                } else {
-                    preventedEvents.add(preventEvent.getId());
-                }
+        for (Event.EventRef ref : choice.getPreventEvents()) {
+            int id = ref.getId();
+            if (id == -1) continue;
+
+            if (!loadedEvents.containsKey(id)) {
+                System.err.println("[EventManager] Warning: choice prevents unknown event id " + id);
+            } else {
+                preventedEvents.add(id);
             }
         }
 
@@ -305,14 +405,15 @@ public class EventManager {
         if (influence != null) {
             gs.applyStats(influence.getStatChange());
         }
-
-        // Recompute available events
-        updateAvailableEvents(gs);
     }
 
-
+    /**
+     * Determines the highest-priority triggered influence from a list of influences.
+     * @param influences The list of the all the choice's influences
+     * @return Returns the greatest influence (first-by-descending-priority) or null if no influence
+     */
     private Event.EventInfluence getHighestPriorityTriggeredInfluence(List<Event.EventInfluence> influences) {
-        if (influences == null || influences.isEmpty()) return null;
+        if (influences.isEmpty()) return null;
 
         // Make a copy and sort descending by priority
         List<Event.EventInfluence> sorted = new ArrayList<>(influences);
@@ -356,47 +457,40 @@ public class EventManager {
         return new ArrayDeque<>(forcedQueue);
     }
 
-    void setEventTriggers(Map<Integer, Integer> triggers) {
+    public Integer getCurrentEventID() {
+        return this.currentEventID;
+    }
+
+    public Event getCurrentEvent() {
+        return loadedEvents.get(currentEventID);
+    }
+
+    public void setEventTriggers(Map<Integer, Integer> triggers) {
         this.eventTriggers = new HashMap<>(triggers);
     }
 
-    void setTriggeredHistory(List<Integer> history) {
+    public void setTriggeredHistory(List<Integer> history) {
         this.triggeredHistory = new ArrayList<>(history);
     }
 
-    void setPreventedEvents(Set<Integer> prevented) {
+    public void setPreventedEvents(Set<Integer> prevented) {
         this.preventedEvents = new HashSet<>(prevented);
     }
 
-    void setForcedQueue(Deque<Integer> forced) {
+    public void setForcedQueue(Deque<Integer> forced) {
         this.forcedQueue = new ArrayDeque<>(forced);
     }
 
-    public List<String> getChoiceOutcomeLines(Event.Choice choice) {
-        if (choice == null) return List.of();
-
-        // Check highest-priority triggered influence first
-        Event.EventInfluence highest = getHighestPriorityTriggeredInfluence(choice.getEventInfluences());
-        if (highest != null && highest.getOverrideOutcomeText() != null && !highest.getOverrideOutcomeText().isEmpty()) {
-            return highest.getOverrideOutcomeText();
-        }
-
-        // Use the choice's outcome text if present
-        if (choice.getOutcomeText() != null && !choice.getOutcomeText().isEmpty()) {
-            return choice.getOutcomeText();
-        }
-
-        // Fallback: return the choice text
-        if (choice.getText() != null && !choice.getText().isEmpty()) {
-            return choice.getText();
-        }
-
-        // If everything else is empty, return an empty list
-        return List.of();
+    public void setCurrentEventID(Integer id) {
+        this.currentEventID = id;
     }
 
-    // ---------- EVENT VIEW INFORMATION ----------
+    // ---------- EVENT-VIEW/DISPLAY INFORMATION ----------
 
+    /**
+     * Represents a simplified view of an event suitable for displaying in the UI.
+     * This class is immutable — once created, its data cannot be modified.
+     */
     public static class EventView {
         private final String title;
         private final List<String> descriptionLines;
@@ -408,27 +502,69 @@ public class EventManager {
             this.choiceLines = choiceLines;
         }
 
-        public String getTitle() { return title; }
-        public List<String> getDescriptionLines() { return descriptionLines; }
-        public List<List<String>> getChoiceLines() { return choiceLines; }
+        public String getTitle() {
+            return title;
+        }
+
+        public List<String> getDescriptionLines() {
+            return descriptionLines;
+        }
+
+        public List<List<String>> getChoiceLines() {
+            return choiceLines;
+        }
     }
 
-    // Return EventView object to display event details
+    /**
+     * Converts an Event object into a simplified EventView for UI display.
+     * Extracts the title, description, and choice text.
+     */
     public EventView getEventView(Event event) {
         if (event == null) return null;
 
-        // Use the event's description directly (already a List<String>)
-        List<String> descriptionLines = event.getDescription() != null
-                ? event.getDescription()
-                : List.of();
-
-        // Prepare choice lines
+        // Description and choices are guaranteed non-null
+        List<String> descriptionLines = event.getDescription();
         List<List<String>> choiceLines = new ArrayList<>();
+
         for (Event.Choice choice : event.getChoices()) {
             choiceLines.add(choice.getText());
         }
 
         return new EventView(event.getTitle(), descriptionLines, choiceLines);
+    }
+
+    /**
+     * Retrieves the outcome text for a choice, prioritizing triggered influences.
+     * The priority for what text to display is:
+     * 1. Override outcome text from the highest-priority triggered influence
+     * 2. The choice's normal outcome text
+     * 3. The choice's display text as a fallback
+     *
+     * @param choice The choice to evaluate
+     * @return A list of strings representing the lines of text to display for this choice's outcome
+     */
+    public List<String> getChoiceOutcomeLines(Event.Choice choice) {
+        if (choice == null) return List.of();
+
+        // Highest-priority triggered influence
+        Event.EventInfluence highest =
+                getHighestPriorityTriggeredInfluence(choice.getEventInfluences());
+
+        if (highest != null && !highest.getOverrideOutcomeText().isEmpty()) {
+            return highest.getOverrideOutcomeText();
+        }
+
+        // Normal outcome text
+        if (!choice.getOutcomeText().isEmpty()) {
+            return choice.getOutcomeText();
+        }
+
+        // Fallback: choice text
+        if (!choice.getText().isEmpty()) {
+            return choice.getText();
+        }
+
+        return List.of();
     }
 }
 

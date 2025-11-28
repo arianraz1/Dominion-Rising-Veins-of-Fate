@@ -1,136 +1,156 @@
 package game;
 
+import javax.swing.*;
 import java.io.IOException;
-import java.util.List;
 import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) throws IOException {
-        // DEV ONLY: Uncomment to reset
-        SaveManager.resetSave();
+        // DEV TESTING, DO NOT UNCOMMENT
+        // SaveManager.resetSave();
 
-        // Load saved game
-        FullGameSave load = SaveManager.loadGame();
+        Scanner input = new Scanner(System.in);
+        GameUI ui = new GameUI(input);
 
-        // Copy game state from save
-        GameState gs = new GameState(load.getGameState());
-
-        // Initialize EventManager
-        EventManager em = new EventManager(gs.getDominionLevel(), gs);
-
-        // Restore dynamic event state
-        SaveManager.restoreEventManager(em, load);
+        GameSession session = setGameLoad(ui);
+        GameState gs = session.gs;
+        EventManager em = session.em;
 
         int dominionLevel = gs.getDominionLevel();
 
-        System.out.println("Dominion Rising: Veins of Fate");
-        System.out.println(gs);
+        ui.displayGameTitle();
 
-        Scanner input = new Scanner(System.in);
         boolean running = true;
 
-        while (running) {
-            em.updateAvailableEvents(gs);
+        // Check if there's any events to begin with
+        em.updateAvailableEvents(gs);
 
-            System.out.print("Forced Queue: " + em.getForcedQueue());
-            System.out.println("Available Events: " + em.getAvailableEvents());
-            System.out.println("Event Triggers: " + em.getEventTriggers());
-            System.out.println("Triggered History: " + em.getTriggeredHistory());
+        // If not, last session had no events or there are no more events due to other circumstances (updates, etc)
+        if (em.getAvailableEvents().isEmpty()) {
+            ui.displayNoEventsAvailable();
+            return;
+        }
+
+        // If the last save had an event running prior to exiting
+        if (em.getCurrentEventID() != null) {
+            ui.displayGameStats(gs);
+            em.triggerEventToHistory(em.getCurrentEventID());
+            handleGame(ui, gs, em, em.getCurrentEvent());
+            // Manually trigger history and update available events
+            em.updateAvailableEvents(gs);
+            SaveManager.saveGame(gs, em);
+        }
+
+        ui.displayGameStats(gs);
+
+        while (!em.getAvailableEvents().isEmpty()) {
+            // DEV TESTING, DO NOT UNCOMMENT
+            // System.out.println("Forced Events Queue: " + em.getForcedQueue());
+            // System.out.println("Available Events List: " + em.getAvailableEvents());
+
             // Handle level-up
             if (gs.getDominionLevel() != dominionLevel) {
                 em = EventManager.handleLevelUp(gs, em);
                 dominionLevel = gs.getDominionLevel();
             }
 
-            // Get a random event
-            Event event = em.getRandomEvent(gs);
-            if (event == null) {
-                System.out.println("No events available. You may have finished the game or encountered an error.");
-                break;
-            }
+            Event event = em.getRandomWeightedEvent(gs);
 
-            // Display event
-            EventManager.EventView view = em.getEventView(event);
-            System.out.println("\n-=-=-=-=-=-=-=--=-=-=-=-=-=-=- Event -=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-");
-            System.out.println(view.getTitle() + "\n");
-
-            // Print multi-line description
-            for (String line : view.getDescriptionLines()) {
-                System.out.println(line);
-            }
-            System.out.println();
-
-            // Skip choice selection if there are no choices
-            if (view.getChoiceLines().isEmpty()) {
-                // Mark event as triggered AFTER viewing it
-                em.triggerEvent(event.getId(), gs);
-
-                SaveManager.saveGame(gs, em);
-                running = continueGame(input);
-                if (!running) { break; }
-                else { continue; }
-            }
-
-            // Display choices (multi-line)
-            for (int i = 0; i < view.getChoiceLines().size(); i++) {
-                List<String> choiceTextLines = view.getChoiceLines().get(i);
-                System.out.printf("%d: %s%n", i + 1, choiceTextLines.get(0));
-                for (int j = 1; j < choiceTextLines.size(); j++) {
-                    System.out.println("   " + choiceTextLines.get(j));
-                }
-                System.out.println();
-            }
-
-            // Get player choice
-            int choiceIndex = -1;
-            while (choiceIndex < 0 || choiceIndex >= view.getChoiceLines().size()) {
-                System.out.print("Choose an option: ");
-                if (input.hasNextInt()) {
-                    choiceIndex = input.nextInt() - 1;
-                    input.nextLine(); // Consume leftover newline
-                } else {
-                    input.next(); // Skip invalid input
-                }
-            }
-
-            Event.Choice choice = event.getChoices().get(choiceIndex);
-
-            // Apply choice results
-            em.choose(event, choice, gs);
-
-            // Save after choice
             SaveManager.saveGame(gs, em);
 
-            // Show outcome (multi-line)
-            List<String> outcomeLines = em.getChoiceOutcomeLines(choice);
-            System.out.println("\nOutcome:");
-            for (String line : outcomeLines) {
-                System.out.println("  " + line);
-            }
+            handleGame(ui, gs, em, event);
 
-            // Show current stats
-            System.out.println("Current stats: " + gs);
-
-            running = continueGame(input);
+            ui.displayGameStats(gs);
         }
 
-        System.out.println("Game session ended.");
+        ui.displayNoEventsAvailable();
         input.close();
     }
 
-    public static boolean continueGame(Scanner sc) {
-        while (true) {
-            System.out.print("Continue? (y/n): ");
-            String cont = sc.nextLine().trim();
-            if (cont.equalsIgnoreCase("y")) {
-                return true;
-            } else if (cont.equalsIgnoreCase("n")) {
-                return false;
-            } else {
-                System.out.println("Invalid input. Please enter 'y' or 'n'.");
+    private static void handleGame(GameUI ui, GameState gs, EventManager em, Event event) throws IOException {
+        if (event == null) {
+            ui.displayNoEventsAvailable();
+            return;
+        }
+
+        // Display event
+        EventManager.EventView view = em.getEventView(event);
+        displayEvent(ui, view);
+
+        // Skip choice selection if there are no choices
+        if (view.getChoiceLines().isEmpty()) {
+            handleOutcome(ui, em, gs, null);
+            return;
+        }
+
+        handleChoices(ui, em, gs, event, view);
+    }
+
+    private static void displayEvent(GameUI ui, EventManager.EventView view) {
+        ui.displayEventHeader();
+        ui.displayEventTitle(view);
+        ui.displayEventDescription(view);
+        ui.displayEventChoices(view);
+        ui.displayBottom();
+    }
+
+    private static void handleChoices(GameUI ui, EventManager em, GameState gs, Event event, EventManager.EventView view) throws IOException {
+        int choiceIndex = ui.getChoiceSelection(view);
+
+        Event.Choice choice = event.getChoices().get(choiceIndex);
+
+        // Apply choice results
+        em.choose(event, choice, gs);
+
+        handleOutcome(ui, em, gs, choice);
+    }
+
+    private static void handleOutcome(GameUI ui, EventManager em, GameState gs, Event.Choice choice) throws IOException {
+        displayOutcome(ui, gs);
+        // If there's a choice, display its outcome
+        if (choice != null) ui.displayEventOutcome(em, choice);
+        // The game state and outcome is displayed and results are successful, do NOT consider this a current event
+        em.setCurrentEventID(null);
+        // Save this state
+        SaveManager.saveGame(gs, em);
+    }
+
+    public static void displayOutcome(GameUI ui, GameState gs) {
+        ui.initiateEventOutcome();
+        ui.displayGameStats(gs);
+        ui.displayOutcomeHeader();
+        ui.displayBottom();
+        ui.finishEventOutcome();
+    }
+
+    private static GameSession setGameLoad(GameUI ui) {
+        GameStartOption choice = ui.getNewGameChoice();
+
+        if (choice == GameStartOption.NEW_GAME) { // Player wants new game
+            boolean overwrite = ui.getOverWriteSave();
+            if (overwrite) {
+                SaveManager.resetSave();
+                GameState gs = new GameState();
+                EventManager em = new EventManager(gs.getDominionLevel());
+                return new GameSession(gs, em);
             }
+            // If not overwriting, fall through to load existing save
+        }
+
+        FullGameSave fgs = SaveManager.loadGame();
+        GameState gs = new GameState(fgs.getGameState());
+        EventManager em = new EventManager(gs.getDominionLevel());
+        SaveManager.restoreEventManager(em, fgs);
+        return new GameSession(gs, em);
+    }
+
+    public static class GameSession {
+        public final GameState gs;
+        public final EventManager em;
+
+        public GameSession(GameState gs, EventManager em) {
+            this.gs = gs;
+            this.em = em;
         }
     }
 }
-
-

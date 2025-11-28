@@ -21,7 +21,8 @@ public class SaveManager {
                 em.getEventTriggers(),
                 em.getTriggeredHistory(),
                 em.getPreventedEvents(),
-                em.getForcedQueue()
+                em.getForcedQueue(),
+                em.getCurrentEventID()
         );
 
         File saveFile = new File(SAVE_FILE);
@@ -54,7 +55,8 @@ public class SaveManager {
                 new HashMap<>(),
                 new ArrayList<>(),
                 new HashSet<>(),
-                new ArrayDeque<>()
+                new ArrayDeque<>(),
+                null
         );
 
         if (!file.exists()) return defaultSave;
@@ -75,6 +77,7 @@ public class SaveManager {
         em.setTriggeredHistory(fgs.getTriggeredHistory());
         em.setPreventedEvents(fgs.getPreventEvents());
         em.setForcedQueue(fgs.getForcedQueue());
+        em.setCurrentEventID(fgs.getCurrentEventID());
     }
 
 
@@ -89,6 +92,11 @@ public class SaveManager {
             System.err.println("[SaveManager] Warning: failed to delete backup save.");
         }
         System.out.println("[SaveManager] Save files reset.");
+    }
+
+    public static boolean saveExists() {
+        File file = new File(SAVE_FILE);
+        return file.exists();
     }
 }
 

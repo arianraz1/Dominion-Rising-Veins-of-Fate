@@ -53,7 +53,7 @@ class EventManagerTester {
         assertNotNull(peek);
         assertEquals(999, peek.getId(), "Forced event peek should match");
 
-        Event polled = em.getRandomEvent(gs);
+        Event polled = em.getRandomEvent();
         assertEquals(999, polled.getId(), "Forced event should be returned by getRandomEvent");
     }
 

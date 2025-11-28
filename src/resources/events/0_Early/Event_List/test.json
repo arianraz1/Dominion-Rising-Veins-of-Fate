@@ -10,7 +10,7 @@
       "text": ["Example","Example"],
       "statChange": {
         "blood": 0,
-        "population": 0,
+        "population": 20,
         "happiness": 0,
         "corruption": 0,
         "dominionLevel": 0
