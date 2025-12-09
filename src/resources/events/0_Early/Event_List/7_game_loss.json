@@ -1,0 +1,48 @@
+{
+  "id": 7,
+  "title": "The end before it began.",
+  "description": [
+    "Your power falters before it ever took root.",
+    "Elijah returns, axe in hand, eyes fixed on you.",
+    "His typical anger blurred by his disappointment.",
+    "You don't have the strength yet to fight back."
+  ],
+  "choices": [
+    {
+      "text": ["Accept your fate."],
+      "statChange": {
+        "blood": 0,
+        "population": 0,
+        "happiness": 0,
+        "corruption": 0,
+        "dominionLevel": -1
+      },
+      "forceEvent": null
+    }
+  ],
+  "requirements": {
+    "minStats": {
+      "blood": 0,
+      "population": 0,
+      "happiness": 0,
+      "corruption": 0,
+      "dominionLevel": 0
+    },
+    "maxStats": {
+      "blood": 120,
+      "population": 300,
+      "happiness": 300,
+      "corruption": 60,
+      "dominionLevel": 0
+    },
+    "requiredEvents": [
+      { "id": 3, "title": "(Must recruit Elijah first)" }
+    ]
+  },
+
+  "forced": false,
+  "maxTriggered": 1
+}
+
+
+

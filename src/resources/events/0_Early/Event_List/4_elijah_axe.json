@@ -1,0 +1,72 @@
+{
+  "id": 4,
+  "title": "You take a strong glance at the artifact beneath you.",
+  "description": [
+    "Elijah's axe.",
+    "The blade still finds a way to reflect amongst the shadows of your corridor."
+  ],
+  "choices": [
+    {
+      "text": [
+        "Pick it up."
+      ],
+      "statChange": {
+        "blood": 0,
+        "population": 0,
+        "happiness": 30,
+        "corruption": 50,
+        "dominionLevel": 0
+      },
+      "outcomeText": [
+        "The polished edge catches your eyes—you see yourself as a stranger."
+      ],
+      "forcesEvent": null,
+      "preventEvents": [],
+      "eventInfluences": []
+    },
+    {
+      "text": [
+        "Let it sit and collect dust."
+      ],
+      "statChange": {
+        "blood": 0,
+        "population": 0,
+        "happiness": -30,
+        "corruption": -50,
+        "dominionLevel": 0
+      },
+      "outcomeText": [
+        "The blade would sigh if it could."
+      ],
+      "forcesEvent": null,
+      "preventEvents": [ {
+        "id": 5 }],
+      "eventInfluences": []
+    }
+  ],
+  "requirements": {
+    "minStats": {
+      "blood": 0,
+      "population": 0,
+      "happiness": 0,
+      "corruption": 0,
+      "dominionLevel": 0
+    },
+    "maxStats": {
+      "blood": 250,
+      "population": 250,
+      "happiness": 250,
+      "corruption": 250,
+      "dominionLevel": 0
+    },
+    "requiredEvents": [
+      { "id": 3, "title": "(Must recruit Elijah first)" }
+    ]
+  },
+
+  "forced": false,
+  "maxTriggered": 1
+}
+
+
+

@@ -1,0 +1,78 @@
+{
+  "id": 2,
+  "title": "A shadow faintly scurries along the room.",
+  "description": [
+    "You notice a subtle change in temperature near the edge of the room. Morvain...",
+    "his frame so slender you nearly missed him. His eyes glance toward you, in awe of your arrival.",
+    "",
+    "You ponder when he last had some blood.",
+    "He kneels, awaiting your request for his service."
+  ],
+  "choices": [
+    {
+      "text": [
+        "Accept Morvain into your domain"
+      ],
+      "statChange": {
+        "blood": 0,
+        "population": 1,
+        "happiness": 5,
+        "corruption": -5,
+        "dominionLevel": 0
+      },
+      "outcomeText": [
+        "Morvain's eyes glimmer with glee... too human for your liking",
+        "He quickly scurries toward the exit, repeatedly bowing every couple of steps."
+      ],
+      "forcesEvent": {
+        "id": 12
+      },
+      "preventEvents": [
+        {
+          "id": 3,
+          "title": "You hear heavy footsteps approaching you..."
+        }, {"id" : 4}
+      ],
+      "eventInfluences": []
+    },
+    {
+      "text": [
+        "Reject Morvain"
+      ],
+      "statChange": {
+        "blood": 0,
+        "population": 0,
+        "happiness": -5,
+        "corruption": 3,
+        "dominionLevel": 0
+      },
+      "outcomeText": [
+        "His gaze drops to the ground, and he sulks on his way out."
+      ],
+      "forcesEvent": null,
+      "preventEvents": [ {"id": 12}],
+      "eventInfluences": []
+    }
+  ],
+  "requirements": {
+    "minStats": {
+      "blood": 0,
+      "population": 0,
+      "happiness": 0,
+      "corruption": 0,
+      "dominionLevel": 0
+    },
+    "maxStats": {
+      "blood": 200,
+      "population": 200,
+      "happiness": 200,
+      "corruption": 200,
+      "dominionLevel": 0
+    }
+  },
+  "forced": false,
+  "maxTriggered": 1
+}
+
+
+

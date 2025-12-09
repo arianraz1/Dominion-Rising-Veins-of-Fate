@@ -35,7 +35,7 @@ import java.util.*;
  *
  * EventView object reflects the relevant information to display to the user.
  *
- * See src/resources/events/template.json for interplay and interconnectivity of events and their data.
+ * See src/resources/events/ for interplay and interconnectivity of events and their data.
  */
 
 public class EventManager {
@@ -405,6 +405,8 @@ public class EventManager {
         if (influence != null) {
             gs.applyStats(influence.getStatChange());
         }
+
+        updateAvailableEvents(gs);
     }
 
     /**

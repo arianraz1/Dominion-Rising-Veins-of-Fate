@@ -1,0 +1,68 @@
+{
+  "id": 10,
+  "title": "Morvain offers you advice.",
+  "description": [
+    "Morvain studies you carefully, as if he can read your thoughts.",
+    "\"Brute force will not secure power and loyalty,\" he says.",
+    "You must learn to sway the provinces subtly."
+  ],
+
+  "choices": [
+    {
+      "text": ["Follow Morvain's advice and manipulate provinces."],
+      "statChange": {
+        "blood": 0,
+        "population": 20,
+        "happiness": 10,
+        "corruption": 0,
+        "dominionLevel": 0
+      },
+      "forcesEvent": { "id": 11, "title": "hmph" },
+      "outcomeText": [
+        "His speculative face transforms into a wide mischevious grin",
+        "He begins by explaining to you some of his plans to you."
+      ]
+    },
+    {
+      "text": ["Ignore Morvain and act independently."],
+      "statChange": {
+        "blood": 0,
+        "population": -5,
+        "happiness": -5,
+        "corruption": 10,
+        "dominionLevel": 0
+      },
+      "preventEvents": [{ "id": 11, "title": "hmph" }],
+      "outcomeText": [
+        "You decide to act independently.",
+        "Morvain's eyes narrow, though he says nothing."
+      ]
+    }
+  ],
+
+  "requirements": {
+    "minStats": {
+      "blood": 0,
+      "population": 0,
+      "happiness": 0,
+      "corruption": 0,
+      "dominionLevel": 0
+    },
+    "maxStats": {
+      "blood": 300,
+      "population": 300,
+      "happiness": 300,
+      "corruption": 300,
+      "dominionLevel": 0
+    },
+    "requiredEvents": [
+      { "id": 12 }
+    ]
+  },
+
+  "forced": false,
+  "maxTriggered": 1
+}
+
+
+

@@ -10,8 +10,8 @@ public class GameState {
     // Default values as constants to allow for substantial player growth
     private static final int DEFAULT_BLOOD = 100; // Initial blood to prevent early death
     private static final int DEFAULT_POPULATION = 100; // Initial population to prevent early loss
-    private static final int DEFAULT_HAPPINESS = 50; // Base vampiric happiness
-    private static final int DEFAULT_CORRUPTION = 75; // Base vampiric corruption
+    private static final int DEFAULT_HAPPINESS = 100; // Base vampiric happiness
+    private static final int DEFAULT_CORRUPTION = 100; // Base vampiric corruption
     private static final int DEFAULT_DOMINION_LEVEL = 0; // Base dominion level
 
     // Maximum values as constants to allow for game continuity

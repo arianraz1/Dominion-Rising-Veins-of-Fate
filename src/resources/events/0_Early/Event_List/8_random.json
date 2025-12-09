@@ -1,0 +1,78 @@
+{
+  "id": 8,
+  "title": "The provinces stir.",
+  "description": [
+    "Words have spread slowly of a new presence awakening nearby.",
+    "They test the waters of your influence."
+  ],
+
+  "choices": [
+    {
+      "text": ["Assert your presence."],
+      "statChange": {
+        "blood": 0,
+        "population": -5,
+        "happiness": -20,
+        "corruption": -10,
+        "dominionLevel": 0
+      },
+      "outcomeText": [
+        "They laugh at your power."
+      ],
+      "eventInfluences": [
+        {
+          "id": 9,
+          "priority": 0,
+          "statChange": {
+            "blood": 0,
+            "population": 15,
+            "happiness": 50,
+            "corruption": 25,
+            "dominionLevel": 0
+          },
+          "overrideOutcomeText": [
+            "They noticed your first kill, and whisper your name in fear.",
+            "Rumors of your power drift through towns, stirring drama."
+          ]
+        }
+      ]
+    },
+    {
+      "text": ["Ignore them."],
+      "statChange": {
+        "blood": 0,
+        "population": 0,
+        "happiness": -5,
+        "corruption": -5,
+        "dominionLevel": 0
+      },
+      "outcomeText": [
+        "You take no action, letting your presence remain quiet.",
+        "Rumors begin to spread, questioning your existence."
+      ]
+    }
+  ],
+
+  "requirements": {
+    "minStats": {
+      "blood": 0,
+      "population": 0,
+      "happiness": 0,
+      "corruption": 0,
+      "dominionLevel": 0
+    },
+    "maxStats": {
+      "blood": 300,
+      "population": 300,
+      "happiness": 300,
+      "corruption": 300,
+      "dominionLevel": 0
+    }
+  },
+
+  "forced": false,
+  "maxTriggered": 3
+}
+
+
+

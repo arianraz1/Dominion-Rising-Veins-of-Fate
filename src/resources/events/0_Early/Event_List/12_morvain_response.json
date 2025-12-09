@@ -1,0 +1,18 @@
+{
+  "id": 12,
+  "title": "Morvain establishes himself nearby.",
+  "description": ["Morvain chooses a residence down the hall, just close enough to observe.",
+                  "His movements are deliberate, his eyes watching keenly.",
+                  "You wonder which side he's truly on."
+  ],
+
+  "requirements": {
+    "requiredEvents": [
+      { "id": 2 }
+    ]
+  },
+  "forced": false,
+  "maxTriggered": 1
+}
+
+

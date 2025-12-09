@@ -1,0 +1,78 @@
+{
+  "id": 3,
+  "title": "You hear heavy footsteps approaching you...",
+  "description": [
+    "The screeching sound of a blade's edge slowly makes its way around the corner.",
+    "\"Hello, dear old friend,\" he said, half out of breath, his brows unfurrowing at your gaze.",
+    "He kneels, laying his axe on the ground.",
+    "",
+    "\"I cannot believe you're back,\" he said, grinning.",
+    "\"Please, let's continue where we left off.\""
+  ],
+  "choices": [
+    {
+      "text": [
+        "Accept Elijah into your domain"
+      ],
+      "statChange": {
+        "blood": 0,
+        "population": 5,
+        "happiness": 0,
+        "corruption": 20,
+        "dominionLevel": 0
+      },
+      "outcomeText": [
+        "He nods his head out of respect.",
+        "He slowly walks out, leaving his axe at your footstep."
+      ],
+      "forcesEvent": null,
+      "preventEvents": [
+        {
+          "id": 2,
+          "title": "A shadow faintly scurries along the room."
+        }
+      ],
+      "eventInfluences": []
+    },
+    {
+      "text": [
+        "Reject Elijah"
+      ],
+      "statChange": {
+        "blood": -10,
+        "population": 0,
+        "happiness": -5,
+        "corruption": -30,
+        "dominionLevel": 0
+      },
+      "outcomeText": [
+        "He slowly walks back. On his way out, he shatters a vase full of blood."
+      ],
+      "forcesEvent": null,
+      "preventEvents": [ { "id": 4}, { "id": 7 }],
+      "eventInfluences": []
+    }
+  ],
+  "requirements": {
+    "minStats": {
+      "blood": 0,
+      "population": 0,
+      "happiness": 0,
+      "corruption": 0,
+      "dominionLevel": 0
+    },
+    "maxStats": {
+      "blood": 200,
+      "population": 200,
+      "happiness": 200,
+      "corruption": 200,
+      "dominionLevel": 0
+    }
+  },
+
+  "forced": false,
+  "maxTriggered": 1
+}
+
+
+

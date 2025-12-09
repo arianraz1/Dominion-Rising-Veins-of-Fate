@@ -1,0 +1,72 @@
+{
+  "id": 6,
+  "title": "You encounter your first human.",
+  "description": [
+    "Provinces once knelt at your throne...",
+    "but humans have changed with the shifting ages."
+  ],
+  "choices": [
+    {
+      "text": [
+        "Use your axe to end it."
+      ],
+      "statChange": {
+        "blood": 0,
+        "population": 0,
+        "happiness": 20,
+        "corruption": 40,
+        "dominionLevel": 0
+      },
+      "outcomeText": [
+        "You bring the axe down with practiced finality.",
+        "A grim satisfaction ripples through whatever you consider a soul.",
+        "Corruption curls, blaring at your feet."
+      ],
+      "preventEvents": [],
+      "eventInfluences": []
+    },
+    {
+      "text": [
+        "Give it mercy."
+      ],
+      "statChange": {
+        "blood": 0,
+        "population": 0,
+        "happiness": -15,
+        "corruption": -35,
+        "dominionLevel": 0
+      },
+      "outcomeText": [
+        "You spare it... sparing a human? When was the last time mercy ever crossed your mind?"
+      ],
+      "preventEvents": [ {
+        "id": 9}],
+      "eventInfluences": []
+    }
+  ],
+  "requirements": {
+    "minStats": {
+      "blood": 0,
+      "population": 0,
+      "happiness": 0,
+      "corruption": 0,
+      "dominionLevel": 0
+    },
+    "maxStats": {
+      "blood": 300,
+      "population": 300,
+      "happiness": 300,
+      "corruption": 300,
+      "dominionLevel": 0
+    },
+    "requiredEvents": [
+      { "id": 5, "title": "(Must go outside with axe)" }
+    ]
+  },
+
+  "forced": false,
+  "maxTriggered": 1
+}
+
+
+

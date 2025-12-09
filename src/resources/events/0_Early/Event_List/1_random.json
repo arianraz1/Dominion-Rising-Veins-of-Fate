@@ -1,0 +1,42 @@
+{
+  "id": 1,
+  "title": "...",
+  "description": [
+    "You take a look around the room, reminiscing the grandeur of your throne hall."
+  ],
+
+  "choices": [
+    {
+      "text": ["Drink some blood for old time's sake."],
+      "statChange": {
+        "blood": -5,
+        "population": 0,
+        "happiness": 2,
+        "corruption": 3,
+        "dominionLevel": 0
+      },
+      "outcomeText": [
+        "You savour the taste for a moment."
+      ]
+    },
+    {
+      "text": ["Rest for a moment on your throne."],
+      "statChange": {
+        "blood": 0,
+        "population": 0,
+        "happiness": 5,
+        "corruption": -5,
+        "dominionLevel": 0
+      },
+      "outcomeText": [
+        "You relax for a moment, gathering your strength."
+      ]
+    }
+  ],
+
+  "forced": false,
+  "maxTriggered": 5
+}
+
+
+

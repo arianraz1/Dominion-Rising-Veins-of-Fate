@@ -13,7 +13,7 @@ import java.util.HashSet;
 
 public class SaveManager {
     private static final Gson gson = new Gson();
-    private static final String SAVE_FILE = System.getProperty("user.home") + File.separator + ".vpg_save.json";
+    private static final String SAVE_FILE = System.getProperty("user.home") + File.separator + "Dominion_Rising_Veins_of_Fate.json";
 
     public static void saveGame(GameState gs, EventManager em) throws IOException {
         FullGameSave fgs = new FullGameSave(
@@ -28,6 +28,9 @@ public class SaveManager {
         File saveFile = new File(SAVE_FILE);
         File backup = new File(SAVE_FILE + ".bak");
 
+        // temp file for atomic write
+        File tmpFile = new File(SAVE_FILE + ".tmp");
+
         // Make sure backup is clean
         if (saveFile.exists()) {
             if (backup.exists() && !backup.delete()) {
@@ -41,9 +44,23 @@ public class SaveManager {
             }
         }
 
-        // Write new save
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(saveFile, StandardCharsets.UTF_8))) {
+        // **Atomic save logic**
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(tmpFile, StandardCharsets.UTF_8))) {
             gson.toJson(fgs, writer);
+        }
+
+        // Replace old save with new atomically (crash-safe)
+        try {
+            Files.move(
+                    tmpFile.toPath(),
+                    saveFile.toPath(),
+                    StandardCopyOption.ATOMIC_MOVE,
+                    StandardCopyOption.REPLACE_EXISTING
+            );
+        } catch (IOException e) {
+            System.err.println("[SaveManager] Warning: atomic replace failed, trying normal replace: " + e.getMessage());
+            Files.copy(tmpFile.toPath(), saveFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            tmpFile.delete();
         }
     }
 

@@ -1,0 +1,75 @@
+{
+  "id": 5,
+  "title": "...",
+  "description": [
+    "You take Elijah's axe for a stroll across the castle...",
+    "The wear of the blade reflected in all but the blade's edges."
+  ],
+  "choices": [
+    {
+      "text": [
+        "Take it outside, and test it on humans."
+      ],
+      "statChange": {
+        "blood": 0,
+        "population": 0,
+        "happiness": 20,
+        "corruption": 20,
+        "dominionLevel": 0
+      },
+      "outcomeText": [
+        "You stretch your arms, stepping outside with the axe ready."
+      ],
+      "forcesEvent": {
+        "id": 6
+      },
+      "preventEvents": [],
+      "eventInfluences": []
+    },
+    {
+      "text": [
+        "Toy with it, then put it back."
+      ],
+      "statChange": {
+        "blood": 0,
+        "population": 0,
+        "happiness": -10,
+        "corruption": -15,
+        "dominionLevel": 0
+      },
+      "outcomeText": [
+        "You sit back down, slightly regretful."
+      ],
+      "forcesEvent": null,
+      "preventEvents": [ {
+        "id": 6
+      }],
+      "eventInfluences": []
+    }
+  ],
+  "requirements": {
+    "minStats": {
+      "blood": 0,
+      "population": 0,
+      "happiness": 0,
+      "corruption": 0,
+      "dominionLevel": 0
+    },
+    "maxStats": {
+      "blood": 250,
+      "population": 250,
+      "happiness": 250,
+      "corruption": 250,
+      "dominionLevel": 0
+    },
+    "requiredEvents": [
+      { "id": 4, "title": "(Must pick up elijah's axe)" }
+    ]
+  },
+
+  "forced": false,
+  "maxTriggered": 1
+}
+
+
+

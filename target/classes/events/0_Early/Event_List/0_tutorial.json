@@ -2,11 +2,13 @@
   "id": 0,
   "title": "Welcome to your dominion, Diablo. You've finally woken up...",
   "description": ["The humans are roaming your once, beloved landscape of gluttony.",
-                  "Oh, how I miss the days where you kept them as behind fences.",
+                  "Oh, how I miss the days where you kept them behind fences for supper.",
                   "We would feast, and feast, yet...",
+                  "",
                   "You've forgotten, haven't you?",
                   "",
-                  "HINT: This is a choice based game... your actions have consequences."],
+                  "HINT: Your actions have consequences."
+  ],
 
   "forced": true,
   "maxTriggered": 1

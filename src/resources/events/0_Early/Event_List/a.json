@@ -1,0 +1,69 @@
+{
+  "id": 0,
+  "title": "Example",
+  "description": [
+    "Example"
+  ],
+
+  "choices": [
+    {
+      "text": ["Example"],
+      "statChange": {
+        "blood": 0,
+        "population": 0,
+        "happiness": 0,
+        "corruption": 0,
+        "dominionLevel": 0
+      },
+      "outcomeText": [
+        "Example"
+      ],
+      "forcesEvent": { "id": 3, "title": "Example Forced Event" },
+      "preventEvents": [
+        { "id": 2, "title": "Example Prevented Event" }
+      ],
+      "eventInfluences": [
+        {
+          "id": 4,
+          "title": "Example Influence",
+          "priority": 0,
+          "statChange": {
+            "blood": 0,
+            "population": 0,
+            "happiness": 0,
+            "corruption": 0,
+            "dominionLevel": 0
+          },
+          "overrideOutcomeText": [
+            "Example"
+          ]
+        }
+      ]
+    }
+  ],
+
+  "requirements": {
+    "minStats": {
+      "blood": 0,
+      "population": 0,
+      "happiness": 0,
+      "corruption": 0,
+      "dominionLevel": 0
+    },
+    "maxStats": {
+      "blood": 130,
+      "population": 130,
+      "happiness": 130,
+      "corruption": 130,
+      "dominionLevel": 0
+    },
+    "requiredEvents": [
+      { "id": 1 }
+    ]
+  },
+
+  "forced": false,
+  "maxTriggered": -1
+}
+
+

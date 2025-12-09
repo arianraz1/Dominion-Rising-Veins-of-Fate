@@ -41,7 +41,6 @@ public class GameUI {
         System.out.println(view.getTitle() + "\n");
     }
 
-
     public void displayEventDescription(EventManager.EventView view) {
         for (String line : view.getDescriptionLines()) {
             System.out.println(line);
@@ -68,7 +67,6 @@ public class GameUI {
         }
     }
 
-
     public void finishEventOutcome() {
         handleEventOutcome("\nPress enter to continue...");
     }
@@ -79,7 +77,7 @@ public class GameUI {
 
     public void handleEventOutcome(String prompt) {
         System.out.println(prompt);
-        sc.nextLine();
+        sc.nextLine(); // now reliably waits for one enter press
     }
 
     public boolean getContinueGame(EventManager em) {
@@ -94,14 +92,14 @@ public class GameUI {
         int choiceIndex = -1;
         while (choiceIndex < 0 || choiceIndex >= view.getChoiceLines().size()) {
             System.out.print("Choose an option: ");
-            if (sc.hasNextInt()) {
-                choiceIndex = sc.nextInt() - 1;
-                sc.nextLine(); // Consume leftover newline
+            String input = sc.nextLine().trim();
+            try {
+                choiceIndex = Integer.parseInt(input) - 1;
                 if (choiceIndex < 0 || choiceIndex >= view.getChoiceLines().size()) {
                     System.out.println("Invalid choice. Please enter a number between 1 and " + view.getChoiceLines().size() + ".");
                 }
-            } else {
-                sc.nextLine(); // Skip invalid input
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid input. Please enter a number.");
             }
         }
         return choiceIndex;
@@ -118,18 +116,17 @@ public class GameUI {
                 System.out.println("1: Start new game");
             }
 
-            if (sc.hasNextInt()) {
-                int choice = sc.nextInt();
-                sc.nextLine(); // consume newline
-
+            String input = sc.nextLine().trim();
+            try {
+                int choice = Integer.parseInt(input);
                 if (saveExists) {
                     if (choice == 1) return GameStartOption.LOAD_GAME;
                     if (choice == 2) return GameStartOption.NEW_GAME;
                 } else {
                     if (choice == 1) return GameStartOption.NEW_GAME;
                 }
-            } else {
-                sc.nextLine(); // skip invalid input
+            } catch (NumberFormatException e) {
+                // fall through to print invalid
             }
             System.out.println("Invalid input. Please enter a valid number.");
         }
@@ -152,3 +149,4 @@ public class GameUI {
         }
     }
 }
+

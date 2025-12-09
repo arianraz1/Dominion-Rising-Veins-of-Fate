@@ -1,0 +1,69 @@
+{
+  "id": 11,
+  "title": "You and Morvain head out.",
+  "description": [
+    "Morvain leads you through the human settlements, showing how small gestures influence others.",
+    "Unlike his demeanor at the castle, he charismatically speaks with a merchant.",
+    "The merchant hands him some free goods, nodding with respect.",
+    "They continue rambling."
+  ],
+
+  "choices": [
+    {
+      "text": ["Chime in, and play along."],
+      "statChange": {
+        "blood": 0,
+        "population": 0,
+        "happiness": 15,
+        "corruption": 0,
+        "dominionLevel": 0
+      },
+      "outcomeText": [
+        "You emulate Morvain's words and gestures carefully.",
+        "The human smiles, intrigued by your presence.",
+        "You convince the human to visit your supposed \"mansion\"."
+      ]
+    },
+    {
+      "text": ["Let Morvain do his thing."],
+      "statChange": {
+        "blood": 0,
+        "population": -15,
+        "happiness": 0,
+        "corruption": 0,
+        "dominionLevel": 0
+      },
+      "outcomeText": [
+        "You continue to watch and observe silently.",
+        "The conversation starts to get dull, and the merchant slowly parts away.",
+        "You lose some faith in Morvain."
+      ]
+    }
+  ],
+
+  "requirements": {
+    "minStats": {
+      "blood": 0,
+      "population": 0,
+      "happiness": 0,
+      "corruption": 0,
+      "dominionLevel": 0
+    },
+    "maxStats": {
+      "blood": 300,
+      "population": 300,
+      "happiness": 300,
+      "corruption": 300,
+      "dominionLevel": 0
+    },
+    "requiredEvents": [
+      { "id": 10 }
+    ]
+  },
+
+  "forced": false,
+  "maxTriggered": 1
+}
+
+
+

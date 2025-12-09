@@ -2,6 +2,7 @@ package game;
 
 import javax.swing.*;
 import java.io.IOException;
+import java.sql.SQLOutput;
 import java.util.Scanner;
 
 public class Main {
@@ -41,15 +42,18 @@ public class Main {
             SaveManager.saveGame(gs, em);
         }
 
-        ui.displayGameStats(gs);
-
         while (!em.getAvailableEvents().isEmpty()) {
             // DEV TESTING, DO NOT UNCOMMENT
             // System.out.println("Forced Events Queue: " + em.getForcedQueue());
             // System.out.println("Available Events List: " + em.getAvailableEvents());
 
-            // Handle level-up
-            if (gs.getDominionLevel() != dominionLevel) {
+            // Handle level-up and game loss
+            int newDominionLevel = gs.getDominionLevel();
+            if (newDominionLevel != dominionLevel) {
+                if (newDominionLevel == dominionLevel - 1) { // Any loss wipes your game
+                    // Game is lost
+                    break;
+                }
                 em = EventManager.handleLevelUp(gs, em);
                 dominionLevel = gs.getDominionLevel();
             }
@@ -59,8 +63,6 @@ public class Main {
             SaveManager.saveGame(gs, em);
 
             handleGame(ui, gs, em, event);
-
-            ui.displayGameStats(gs);
         }
 
         ui.displayNoEventsAvailable();
@@ -75,7 +77,7 @@ public class Main {
 
         // Display event
         EventManager.EventView view = em.getEventView(event);
-        displayEvent(ui, view);
+        displayEvent(ui, gs, view);
 
         // Skip choice selection if there are no choices
         if (view.getChoiceLines().isEmpty()) {
@@ -86,8 +88,10 @@ public class Main {
         handleChoices(ui, em, gs, event, view);
     }
 
-    private static void displayEvent(GameUI ui, EventManager.EventView view) {
+    private static void displayEvent(GameUI ui, GameState gs, EventManager.EventView view) {
         ui.displayEventHeader();
+        ui.displayGameStats(gs);
+        System.out.println();
         ui.displayEventTitle(view);
         ui.displayEventDescription(view);
         ui.displayEventChoices(view);
@@ -106,22 +110,25 @@ public class Main {
     }
 
     private static void handleOutcome(GameUI ui, EventManager em, GameState gs, Event.Choice choice) throws IOException {
-        displayOutcome(ui, gs);
+        ui.initiateEventOutcome();
+
+        ui.displayOutcomeHeader();
+
+        ui.displayGameStats(gs);
+        System.out.println();
+
         // If there's a choice, display its outcome
         if (choice != null) ui.displayEventOutcome(em, choice);
         // The game state and outcome is displayed and results are successful, do NOT consider this a current event
         em.setCurrentEventID(null);
         // Save this state
         SaveManager.saveGame(gs, em);
-    }
 
-    public static void displayOutcome(GameUI ui, GameState gs) {
-        ui.initiateEventOutcome();
-        ui.displayGameStats(gs);
-        ui.displayOutcomeHeader();
         ui.displayBottom();
+
         ui.finishEventOutcome();
     }
+
 
     private static GameSession setGameLoad(GameUI ui) {
         GameStartOption choice = ui.getNewGameChoice();

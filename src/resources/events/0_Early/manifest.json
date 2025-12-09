@@ -1,8 +1,17 @@
 {
   "events": [
     "0_tutorial.json",
-    "1_tutorial.json",
-    "test.json",
-    "4.json"
+    "1_random.json",
+    "2_recruiting_morvain.json",
+    "3_recruiting_elijah.json",
+    "4_elijah_axe.json",
+    "5_elijah_axe_use.json",
+    "6_elijah_axe_use.json",
+    "7_game_loss.json",
+    "8_random.json",
+    "9_kill_response.json",
+    "10_morvain_advice.json",
+    "11_morvain_and_you.json",
+    "12_morvain_response.json"
   ]
 }

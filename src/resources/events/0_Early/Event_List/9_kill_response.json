@@ -1,0 +1,17 @@
+{
+  "id": 9,
+  "title": "Word of your first kill has spread quickly.",
+  "description": ["Whispers of fear and awe ripple across.",
+                  "In contrast, some smiles simmer in the shadows, full of ecstatic delight."
+  ],
+
+  "requirements": {
+    "requiredEvents": [
+      { "id": 6 }
+    ]
+  },
+  "forced": false,
+  "maxTriggered": 1
+}
+
+
